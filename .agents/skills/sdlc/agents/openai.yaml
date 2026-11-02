@@ -1,0 +1,4 @@
+interface:
+  display_name: "SDLC"
+  short_description: "Take a ticket from intake to a merged PR"
+  default_prompt: "Use $sdlc to take this ticket through intake, plan, spec, implementation, and a merged PR."
