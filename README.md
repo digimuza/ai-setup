@@ -15,5 +15,6 @@ their authors.
   Matt Pocock (MIT): `code-review`, `codebase-design`, `diagnosing-bugs`,
   `grill-me`, `grilling`, `retro`, `to-spec`, `wizard`
 
-`jira` and `sdlc` are written for this repo. `sdlc` ties together skills
-from both collections.
+`linear` and `sdlc` are written for this repo. `linear` routes every Linear
+action through the `linear` CLI (team DIG). `sdlc` ties together skills from
+both collections.

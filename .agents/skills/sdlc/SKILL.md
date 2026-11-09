@@ -3,7 +3,7 @@ name: sdlc
 description: >-
   Standard development lifecycle for delivering a feature or ticket end to end:
   intake, plan, spec, implement, and ship a PR. Use when the user says "sdlc",
-  asks to run the full lifecycle, or hands over a Jira ticket to take from
+  asks to run the full lifecycle, or hands over a Linear issue (DIG-123) to take from
   idea to merged PR.
 ---
 
@@ -21,14 +21,15 @@ up front.
 
 ## Setup
 
-1. **Name the work.** `<name>` is the Jira key plus a short slug, for example
-   `PROJ-123-export-csv`. If there is no ticket, use a slug alone.
+1. **Name the work.** `<name>` is the Linear issue key plus a short slug, for example
+   `DIG-123-export-csv`. If there is no issue yet, create one with the `linear`
+   skill first: every change has a DIG issue.
 2. **Create a worktree.** Every feature starts in its own worktree on a new
    branch from the latest default branch:
 
    ```sh
    git fetch origin
-   git worktree add ../<repo>-<name> -b <name> origin/main
+   git worktree add ../<repo>-<name> -b feature/<name> origin/main
    ```
 
    In T3 Code, start the thread in worktree mode instead. Never work on the
@@ -47,9 +48,9 @@ finished phases unless the user asks.
 
 Goal: no open question remains that would change the result.
 
-1. **Gather facts yourself.** Use the `jira` skill to read the ticket, its
-   comments, linked issues, and acceptance criteria. Read the code the
-   ticket touches. Never ask the user for something you can look up.
+1. **Gather facts yourself.** Use the `linear` skill to read the issue, its
+   comments, related issues, and acceptance criteria. Read the code the
+   issue touches. Never ask the user for something you can look up.
 2. **Grill the user.** Use the `grilling` skill on the decisions the facts
    leave open: scope, edge cases, UX, data, rollout, what "done" means.
    Give a recommended answer with each question.
@@ -67,7 +68,7 @@ Goal: no open question remains that would change the result.
      counts as enough proof (a fake, a recorded fixture, a manual check
      after merge).
 4. **Write `INTAKE.md`** with these sections:
-   - **Source**: ticket link and key, plus the user's original request.
+   - **Source**: Linear issue link and key, plus the user's original request.
    - **Goal**: one or two sentences, from the user's point of view.
    - **Acceptance criteria**: a checklist that can be tested.
    - **Proof and access**: how each criterion will be proven, and the
@@ -152,9 +153,9 @@ before merging, use `full-stop` instead.
   "Review" below. Then continue from "File the PR".
 - The PR description must include the evidence. See "PR evidence" below.
   This replaces full-send's one-line proof note.
-- Use the `jira` skill to move the ticket to the status that matches the PR,
-  such as In Review, and then Done after the merge, if the project uses
-  those statuses.
+- Use the `linear` skill to move the issue to `In Review` when the PR to
+  `main` opens. `In Staging` and `Done` follow the release cycle (release
+  branch, then `production`); the release workflows set them.
 
 **Done when** the PR is merged (or ready, under `full-stop`) and you have
 sent the final report from `full-send`, with a link to `.sdlc/<name>/`.
@@ -213,7 +214,7 @@ before the line that credits the model:
 ```md
 ## Evidence
 
-Ticket: [PROJ-123](<link>)
+Issue: [DIG-123](<link>)
 
 | Acceptance criterion | Proof | Result |
 | --- | --- | --- |
