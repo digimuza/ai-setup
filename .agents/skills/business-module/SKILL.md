@@ -34,27 +34,30 @@ a library with a stable contract, not like app code.
 
 ## Shape
 
-Keep everything a module owns together and easy to copy:
+A reusable module lives **in system-core** as a subpath export,
+`@digimuza/system-core/<id>` (repo https://github.com/digimuza/system-core,
+`src/<id>/index.ts`; `finance` is the reference). The app installs it; the UI
+stays in the app, because each client styles it.
 
-| Part | Where (system-template) |
+| Part | Where |
 | --- | --- |
-| Manifest: id, kind `business`, description, permissions, initial subroles, feature flags, config keys | `modules/<id>.ts` (`defineModule`), listed in `modules/index.ts` |
-| Tables (spread into the schema) | `convex/schema.ts` → move into an exported `<id>Tables` object as the module grows |
-| Functions | `convex/<id>.ts` (Convex needs functions under `convex/`); keep the logic in plain functions that take `(ctx, sys, actor, args)` so another app can re-export them |
-| Config | a Zod schema for the module's keys, registered with `SystemConfig.register(schema, { moduleId: "<id>" })` / validated in Convex |
-| Pages | `app/app/<id>/` with `requireSession({ permission })`; components from `components/ui` + `components/app` |
-| Strings | `lib/i18n/messages.ts`, keys prefixed with the module (`<id>.…`), both `lt` and `en` |
-| Tests | `convex/<id>.test.ts` with convex-test |
-| Docs | purpose, type, public operations, data owner, config keys, permissions, initial subroles, flags, one success and one denial scenario (system-core README contract) |
+| Manifest: id, kind `business`, description, permissions, initial subroles, feature flags, config keys | system-core `src/<id>/index.ts`: `export const <id> = defineModule({…})` and a `<Id>Permissions` map |
+| Tables | system-core: `export const <id>Tables = { … }` with an index for every query |
+| Functions | system-core: `export function define<Id>(system: ConvexSystem)` returning guarded `queryGeneric` / `mutationGeneric` functions (guard → object checks → write → audit, typed IDs, `operationId` in results) |
+| Package entry | `"./<id>"` in system-core `package.json` exports (the pack check covers every entry) |
+| Tests | system-core `test/<id>-app/` (installed like a client app) + `test/<id>.test.ts` with convex-test |
+| Docs | system-core README / INTEGRATION.md: purpose, type, public operations, data owner, config keys, permissions, initial subroles, flags, one success and one denial scenario |
+| Install in an app | `modules/index.ts` (manifest), `convex/schema.ts` (`...<id>Tables`), `convex/<id>.ts` (`export const { … } = define<Id>(system)`) |
+| Pages and strings | app: `app/app/<id>/` with `requireSession({ permission })`, shadcn components, keys `<id>.…` in `lib/i18n/messages.ts` (lt + en) |
 
 ## Checklist
 
-1. Manifest with permissions and at least one read-only and one full subrole.
+1. In system-core, on a `feature/DIG-…` branch: manifest with permissions and at least one read-only and one full subrole.
 2. Tables with indexes for every query.
 3. Functions: guard → object checks → write → audit, return `operationId`.
 4. Agent support: accept `apiKey` where agents should act.
 5. Pages, empty states and errors through `useAction` (toasts show the
    operation ID); all strings in both languages.
 6. Tests: unauthenticated, forbidden, disabled module, happy path, audit.
-7. `npx convex run system:registerSystem` locally; README module section.
+7. system-core PR, release (`release/X.Y.Z` → npm `next`, `production` → `latest`); install in the app on the RC, ship on `latest`; `npx convex run system:registerSystem`.
 8. Linear issue per module or change (`linear` skill).
