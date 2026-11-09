@@ -15,6 +15,10 @@ their authors.
   Matt Pocock (MIT): `code-review`, `codebase-design`, `diagnosing-bugs`,
   `grill-me`, `grilling`, `retro`, `to-spec`, `wizard`
 
-`linear` and `sdlc` are written for this repo. `linear` routes every Linear
-action through the `linear` CLI (team DIG). `sdlc` ties together skills from
-both collections.
+Written for this repo:
+
+- `sdlc`: ties together skills from both collections into one lifecycle.
+- Our stack: `nextjs` (main framework), `convex` (backend, written for reuse),
+  `business-module` (reusable modules; shared logic goes to
+  `@digimuza/system-core`), `workos` (AuthKit sign-in), `infisical` (secrets),
+  `coolify` (hosting and deploys), `linear` (work tracking via the `linear` CLI).
