@@ -19,12 +19,21 @@ is written **for reuse**: the same module ships to many client apps.
   (see the `business-module` skill), not in a client's app code. No client
   names, hard-coded IDs, or one-off branches in backend code; differences
   between clients are configuration (env schema, feature flags, roles).
-- **Generic logic belongs in system-core.** If code is not specific to one
-  business module (access checks, audit, jobs, config, pagination helpers,
-  identity mapping), put it in `@digimuza/system-core` (repo
-  `~/Projects/digimuza/system-core`) through its own branch, PR and release
-  (`next` from release branches, `latest` from production), then bump the app.
-  Don't copy shared helpers between apps.
+- **Generic logic belongs in system-core, changed only in its repo.** If code
+  is not specific to one business module (access checks, audit, jobs, config,
+  pagination helpers, identity mapping), it goes into `@digimuza/system-core`
+  through **https://github.com/digimuza/system-core** (local clone
+  `~/Projects/digimuza/system-core`):
+  1. Linear issue, then a `feature/DIG-123-<slug>` branch from `origin/main`
+     in the system-core repo; PR to `main` with the DIG key in the title.
+  2. Release: `release/X.Y.Z` publishes `X.Y.Z-rc.N` under npm `next`; merging
+     to `production` publishes `latest`.
+  3. Try an RC in an app on a feature branch (`pnpm core:npm X.Y.Z-rc.N`);
+     ship apps only on `latest` (`pnpm core:npm`).
+  Never patch system-core from an app: no edits in `node_modules`, no copied
+  helpers, no committed `pnpm core:link`. Until the release lands, keep a
+  clearly marked workaround in the app and list it in
+  `docs/system-core-notes.md`.
 - **Every public function checks access on the server, first.** Use the app's
   `requirePermission(ctx, "module:object:action", { apiKey })` from
   `convex/system.ts` (typed wrapper; also enforces a Super's role view), then

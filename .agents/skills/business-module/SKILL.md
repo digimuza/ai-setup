@@ -25,8 +25,9 @@ a library with a stable contract, not like app code.
   the app's typed wrappers (`convex/system.ts`). No imports from another
   business module; declare `dependsOn` if you need one (it never grants its
   permissions).
-- **Shared generic code goes to system-core**, through its repo, PR and
-  release, not into the module or the app (see the `convex` skill).
+- **Shared generic code goes to system-core**, changed only in
+  https://github.com/digimuza/system-core (branch, PR, release; see the
+  `convex` skill), not into the module or the app.
 - **Server enforces, UI hints.** Every function guards with `requirePermission`
   first; pages use `requireSession({ permission })` and `<Can>`.
 - Business modules register **disabled**; only Super enables them.
