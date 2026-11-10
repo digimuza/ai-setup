@@ -1,0 +1,3 @@
+interface:
+  display_name: "Definition of Done"
+  short_description: "Classify a change, run its checks, give a merge verdict"

@@ -1,0 +1,3 @@
+interface:
+  display_name: "Module Verify"
+  short_description: "Prove a business module change follows the module contract"

@@ -21,9 +21,9 @@ GOOD
 
 > ✅ perf(server): cut websocket frame size by 70%+ with gzipping
 
-If Jira ticket is known add Jira ticket
+If the Linear issue is known, add its key (required in DIG projects)
 
-> ✅ perf(server): PROJ-XXX - cut websocket frame size by 70%+ with gzipping
+> ✅ perf(server): DIG-123 cut websocket frame size by 70%+ with gzipping
 
 Open the description with a simple explanation of the problem based on the
 user's original prompt, then briefly explain the solution. Do not lead with an

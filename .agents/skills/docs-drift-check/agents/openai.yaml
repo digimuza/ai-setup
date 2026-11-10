@@ -1,0 +1,3 @@
+interface:
+  display_name: "Docs Drift Check"
+  short_description: "Find docs that no longer match the code"

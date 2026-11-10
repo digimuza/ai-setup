@@ -1,0 +1,131 @@
+#!/usr/bin/env bash
+# Git pre-push hook template (definition-of-done skill). Runs the repo's checks before a push and
+# refuses the push only for failures the base commit does not have, so it works in a repo that
+# already carries lint or test debt.
+#
+#   For each check:  passes on the working tree              -> ok
+#                    fails, and passes on the base            -> FAIL (the change broke it)
+#                    fails on both, with output lines the base
+#                    does not print (line numbers ignored)     -> FAIL (new findings)
+#                    fails on both with no new lines           -> warn (pre-existing)
+#
+# Install:  cp scripts/pre-push <repo>/.githooks/pre-push && chmod +x <repo>/.githooks/pre-push
+#           git config core.hooksPath .githooks   (or "prepare": "git config core.hooksPath .githooks")
+# Configure: edit CHECKS to match the CI workflow; each entry is one shell command.
+# Env:      SKIP_PRE_PUSH=1 skips once (as does git push --no-verify)
+#           PRE_PUSH_BASE=<ref> overrides the base (default: merge-base with origin's default branch)
+#           PRE_PUSH_STRICT=1 fails on any failing check, pre-existing or not
+# Skipped under CI (GITHUB_ACTIONS / CI set): the workflow is the gate there.
+set -uo pipefail
+
+CHECKS=(
+  "pnpm typecheck"
+  "pnpm lint"
+  "pnpm test"
+)
+
+say() { printf '[pre-push] %s\n' "$*"; }
+die() { say "$*"; exit 1; }
+
+[ "${SKIP_PRE_PUSH:-}" = 1 ] && { say "SKIP_PRE_PUSH=1, checks skipped"; exit 0; }
+[ -n "${GITHUB_ACTIONS:-}${CI:-}" ] && { say "running under CI, checks skipped"; exit 0; }
+
+ROOT=$(git rev-parse --show-toplevel) || die "not inside a git work tree"
+cd "$ROOT" || die "cannot cd to $ROOT"
+
+# Only deletions or tags on stdin: nothing to check.
+ZERO=0000000000000000000000000000000000000000
+# No ref lines at all (run by hand) counts as a push of HEAD.
+if [ ! -t 0 ]; then
+  lines=0 pushing=0
+  while read -r _lref lsha rref _rsha; do
+    [ -z "${lsha:-}" ] && continue
+    lines=1
+    [ "$lsha" = "$ZERO" ] && continue
+    case "$rref" in refs/tags/*) continue ;; esac
+    pushing=1
+  done
+  [ "$lines" = 0 ] || [ "$pushing" = 1 ] || { say "only deletions or tags, nothing to check"; exit 0; }
+fi
+
+# Keep only the checks whose package.json script exists (so the template works unedited).
+has_script() { node -e "process.exit(require('./package.json').scripts?.[process.argv[1]] ? 0 : 1)" "$1" 2>/dev/null; }
+active=()
+for c in "${CHECKS[@]}"; do
+  case "$c" in
+    "pnpm "* | "npm run "* | "yarn "*)
+      script=${c##* }
+      if [ -f package.json ] && ! has_script "$script"; then say "skip '$c' (no such script)"; continue; fi
+      ;;
+  esac
+  active+=("$c")
+done
+[ "${#active[@]}" -gt 0 ] || { say "no checks configured"; exit 0; }
+
+if [ -n "${PRE_PUSH_BASE:-}" ]; then
+  base=$(git rev-parse --verify -q "${PRE_PUSH_BASE}^{commit}") || die "PRE_PUSH_BASE=$PRE_PUSH_BASE is not a commit"
+else
+  default=$(git symbolic-ref -q --short refs/remotes/origin/HEAD 2>/dev/null || echo origin/main)
+  base=$(git merge-base HEAD "$default" 2>/dev/null) || die "no merge-base with $default (git fetch origin, or set PRE_PUSH_BASE)"
+fi
+
+TMP=$(mktemp -d "${TMPDIR:-/tmp}/pre-push.XXXXXX") || die "mktemp failed"
+BASE_DIR="$TMP/base"
+keep=0
+cleanup() {
+  [ -d "$BASE_DIR" ] && git worktree remove --force "$BASE_DIR" >/dev/null 2>&1
+  [ "$keep" = 1 ] || rm -rf "$TMP"
+}
+trap cleanup EXIT
+
+say "HEAD $(git rev-parse --short HEAD) vs base $(git rev-parse --short "$base")"
+[ -z "$(git status --porcelain --untracked-files=no)" ] ||
+  say "WARNING: working tree differs from HEAD; checks run on the working tree"
+
+base_ready=0
+prepare_base() {
+  [ "$base_ready" = 1 ] && return 0
+  git worktree add --detach --quiet "$BASE_DIR" "$base" || return 1
+  [ -d node_modules ] && ln -s "$ROOT/node_modules" "$BASE_DIR/node_modules"
+  base_ready=1
+}
+# Strip what moves between runs: line:col positions, timings, ANSI colours, absolute paths.
+normalize() {
+  local real_base real_root
+  real_base=$(cd "$BASE_DIR" 2>/dev/null && pwd -P) real_root=$(cd "$ROOT" && pwd -P)
+  P1="$BASE_DIR" P2="${real_base:-$BASE_DIR}" P3="$ROOT" P4="$real_root" perl -pe '
+    s/\e\[[0-9;]*m//g; for my $k (qw(P2 P1 P4 P3)) { my $v = $ENV{$k}; s/\Q$v\E\/?//g }
+    s/:\d+(:\d+)?/:N/g; s/\(\d+,\d+\)/(N)/g; s/\b\d+(\.\d+)? ?m?s\b/T/g' "$1" | sort -u
+}
+
+failed=0 summary=""
+for c in "${active[@]}"; do
+  name=$(printf '%s' "$c" | tr -c 'a-zA-Z0-9' '_')
+  say "$c ..."
+  if bash -c "$c" >"$TMP/$name.head" 2>&1; then
+    summary+=$'\n'"  ok    $c"
+    continue
+  fi
+  if [ "${PRE_PUSH_STRICT:-}" = 1 ]; then
+    failed=1 keep=1; tail -n 80 "$TMP/$name.head"; summary+=$'\n'"  FAIL  $c"; continue
+  fi
+  prepare_base || { failed=1 keep=1; tail -n 80 "$TMP/$name.head"; summary+=$'\n'"  FAIL  $c (base unavailable)"; continue; }
+  if (cd "$BASE_DIR" && bash -c "$c") >"$TMP/$name.base" 2>&1; then
+    failed=1 keep=1; tail -n 80 "$TMP/$name.head"; summary+=$'\n'"  FAIL  $c (passes on base)"; continue
+  fi
+  new=$(comm -23 <(normalize "$TMP/$name.head") <(normalize "$TMP/$name.base"))
+  if [ -n "$new" ]; then
+    failed=1 keep=1
+    say "new output lines relative to base:"; printf '%s\n' "$new" | head -n 80
+    summary+=$'\n'"  FAIL  $c (new findings)"
+  else
+    summary+=$'\n'"  warn  $c (fails the same way on base)"
+  fi
+done
+
+say "summary:$summary"
+if [ "$failed" = 1 ]; then
+  say "push refused; logs in $TMP. Fix the failures, or bypass once with SKIP_PRE_PUSH=1 git push."
+  exit 1
+fi
+say "all checks passed or failed only as on base"
