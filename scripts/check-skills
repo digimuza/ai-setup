@@ -1,0 +1,84 @@
+#!/usr/bin/env python3
+"""Lint .agents/skills: frontmatter, references to other skills, relative links, executable scripts.
+
+Usage: scripts/check-skills [skills-dir]   (default: .agents/skills next to this script's repo)
+Exit 1 with one line per problem, so CI and agents can read it.
+"""
+import os
+import re
+import sys
+from pathlib import Path
+
+# Skills that other skills may name but that are installed from elsewhere.
+EXTERNAL = {"impeccable"}
+
+root = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).resolve().parents[1] / ".agents/skills"
+skills = sorted(p for p in root.iterdir() if p.is_dir())
+names = {p.name for p in skills}
+problems = []
+
+
+def problem(path, line, msg):
+    problems.append(f"{path.relative_to(root.parent.parent)}:{line}: {msg}")
+
+
+REF_PATTERNS = [
+    re.compile(r"`([a-z][a-z0-9-]+)` skill"),
+    re.compile(r"skill(?:s)? `([a-z][a-z0-9-]+)`"),
+    re.compile(r"Skill tool with [`\"]([a-z][a-z0-9-]+)"),
+]
+LINK = re.compile(r"\[[^\]]*\]\(([^)\s]+)\)")
+
+for skill in skills:
+    md = skill / "SKILL.md"
+    if not md.is_file():
+        problem(skill, 0, "missing SKILL.md")
+        continue
+    text = md.read_text()
+    lines = text.splitlines()
+    if not lines or lines[0] != "---" or "---" not in lines[1:]:
+        problem(md, 1, "no YAML frontmatter")
+        continue
+    end = lines[1:].index("---") + 1
+    front = "\n".join(lines[1:end])
+    m = re.search(r"^name:\s*(\S+)", front, re.M)
+    if not m:
+        problem(md, 2, "frontmatter has no name")
+    elif m.group(1) != skill.name:
+        problem(md, 2, f"name '{m.group(1)}' does not match directory '{skill.name}'")
+    d = re.search(r"^description:\s*(.*)$", front, re.M)
+    if not d or not (d.group(1).strip(" >-|\"'") or re.search(r"^description:\s*[>|]-?\s*\n\s+\S", front, re.M)):
+        problem(md, 2, "frontmatter has no description")
+
+    for path in sorted(skill.rglob("*.md")):
+        body = path.read_text().splitlines()
+        in_code = False
+        for n, line in enumerate(body, 1):
+            if line.lstrip().startswith("```"):
+                in_code = not in_code
+                continue
+            if in_code:
+                continue
+            refs = {ref for pat in REF_PATTERNS for ref in pat.findall(line)}
+            for ref in sorted(refs - names - EXTERNAL):
+                problem(path, n, f"references missing skill '{ref}'")
+            for target in LINK.findall(line):
+                if re.match(r"[a-z]+:", target) or target.startswith("#"):
+                    continue
+                target = target.split("#")[0]
+                if not (path.parent / target).exists():
+                    problem(path, n, f"broken link '{target}'")
+
+    for script in [*skill.glob("scripts/*")]:
+        # *.template.* files are copied into a repo, not run in place.
+        if script.is_file() and ".template" not in script.name and not script.name.endswith((".md", ".txt", ".json")) and not os.access(script, os.X_OK):
+            problem(script, 0, "script is not executable (chmod +x)")
+
+    yaml = skill / "agents/openai.yaml"
+    if yaml.exists() and not re.search(r"^interface:", yaml.read_text(), re.M):
+        problem(yaml, 1, "openai.yaml has no interface block")
+
+for p in problems:
+    print(p)
+print(f"check-skills: {len(skills)} skills, {len(problems)} problem(s)", file=sys.stderr)
+sys.exit(1 if problems else 0)

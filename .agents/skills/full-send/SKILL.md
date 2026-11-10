@@ -70,7 +70,8 @@ reproduction, a screenshot. Use the most direct proof the change allows:
 
 - Reproduce the original failure, apply the fix, then watch the same
   reproduction pass.
-- Run the checks that the repo's CI runs (typecheck, lint, tests).
+- Run the checks that the repo's CI runs (typecheck, lint, tests). The
+  `definition-of-done` skill runs them and lists what else the change needs.
 - Add one focused test that fails without the fix, when the behavior has none
   and the repo has a test setup.
 - For UI and runtime behavior, run the app and look at the change. Green mocked

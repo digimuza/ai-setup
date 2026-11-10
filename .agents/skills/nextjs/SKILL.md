@@ -39,6 +39,7 @@ before writing code you're unsure about (see `AGENTS.md`).
 | Server actions | `"use server"` files; never return secrets |
 | Agent API | route handlers under `app/api/v1/*` with `createAgentClient({ apiKey })`; decide nothing there |
 | UI | shadcn/ui in `components/ui` (`npx shadcn@latest add <name>`), app pieces in `components/app`, Lucide icons, Tailwind v4 tokens; the client's accent is `--primary` |
+| UI design | Every UI change, however small, goes through the `impeccable` skill: context step, craft floor while editing, `polish` + detector at the end, and a look at desktop and phone widths in light and dark |
 | Strings | `getT()` (server) / `useT()` (client), keys in `lib/i18n/messages.ts`, `lt` and `en` |
 | Brand | `brand.ts` only |
 

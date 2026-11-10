@@ -50,6 +50,21 @@ stays in the app, because each client styles it.
 | Install in an app | `modules/index.ts` (manifest), `convex/schema.ts` (`...<id>Tables`), `convex/<id>.ts` (`export const { … } = define<Id>(system)`) |
 | Pages and strings | app: `app/app/<id>/` with `requireSession({ permission })`, shadcn components, keys `<id>.…` in `lib/i18n/messages.ts` (lt + en) |
 
+## AI tools
+
+A module exposes its actions to the AI assistant (`@digimuza/system-core/ai`)
+with `defineAiTool`, in system-core next to its functions (`src/<id>/ai-tools.ts`,
+exported as `<id>Tools`; `src/finance/ai-tools.ts` is the reference):
+
+- id `module.verb_object` (`finance.list_invoices`); a description for the model.
+- `permission` = the module's own permission, never `ai:chat:use`.
+- Anything that writes sets `requiresApproval: true` (the user approves each call).
+- The handler reuses the module's shared operations and **validates everything
+  before its first write**: a failed handler's earlier writes are committed (the
+  failure is returned, not thrown, so the audit survives).
+- Agents and their tools live in the app's `convex/aiConfig.ts` (no `"use node"`);
+  add `...<id>Tools` to the agent's `tools` there.
+
 ## Checklist
 
 1. In system-core, on a `feature/DIG-…` branch: manifest with permissions and at least one read-only and one full subrole.
@@ -59,5 +74,7 @@ stays in the app, because each client styles it.
 5. Pages, empty states and errors through `useAction` (toasts show the
    operation ID); all strings in both languages.
 6. Tests: unauthenticated, forbidden, disabled module, happy path, audit.
+   If the module has AI tools: permission filter, approval, validation before write.
+   Before the PR, run the `module-verify` skill on the change.
 7. system-core PR, release (`release/X.Y.Z` → npm `next`, `production` → `latest`); install in the app on the RC, ship on `latest`; `npx convex run system:registerSystem`.
 8. Linear issue per module or change (`linear` skill).

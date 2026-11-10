@@ -70,6 +70,7 @@ is written **for reuse**: the same module ships to many client apps.
 | Catalog | after adding a module, permission or subrole: `npx convex run system:registerSystem` (CI does it on deploy). Idempotent; conflicts abort atomically |
 | Env in functions | read keys **by name** (`process.env.KEY`); Convex's `process.env` is not enumerable. Validate with the Zod schema in `env.ts` (`getConvexEnv()`) |
 | Auth | `convex/auth.config.ts` trusts WorkOS tokens via `WORKOS_CLIENT_ID`; it's read at push, so changing it needs a redeploy. Custom JWT claims arrive raw (`identity.email_verified`, not `emailVerified`) |
+| AI tools | a module exposes actions to the assistant with `defineAiTool` (permission = the module's own; writes `requiresApproval: true`; handler validates before its first write, since earlier writes of a failed handler commit). Agents in `convex/aiConfig.ts` (no `"use node"`), functions in `convex/ai.ts`, the runner in `convex/aiRunner.ts` (`"use node"`). Env on Convex: `OPENAI_BASE_URL`, `OPENAI_API_KEY`, `AI_MODEL` |
 | Typed ctx | call system-core through the wrappers in `convex/system.ts` (`requirePermission`, `systemContext`): generated `QueryCtx` isn't assignable to system-core's `DbCtx` |
 
 ## Command map

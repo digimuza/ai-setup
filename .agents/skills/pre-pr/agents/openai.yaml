@@ -1,0 +1,6 @@
+interface:
+  display_name: "Pre-PR"
+  short_description: "Read-only definition-of-done run with a verdict"
+  default_prompt: "Use $pre-pr on this branch."
+policy:
+  allow_implicit_invocation: false
