@@ -27,7 +27,7 @@ change. A skill installed from elsewhere (`impeccable`) goes in its
 
 ## Credits
 
-Most of these skills come from two open-source collections. Thank you to
+Most of these skills come from open-source collections. Thank you to
 their authors.
 
 - **[t3dotgg/tstack](https://github.com/t3dotgg/tstack)** by Theo Browne (MIT):
@@ -36,6 +36,8 @@ their authors.
 - **[mattpocock/skills](https://github.com/mattpocock/skills/tree/main)** by
   Matt Pocock (MIT): `code-review`, `codebase-design`, `diagnosing-bugs`,
   `grill-me`, `grilling`, `retro`, `to-spec`, `wizard`
+- **[awesome-skills/first-principles-skill](https://github.com/awesome-skills/first-principles-skill)**
+  (MIT): `first-principles`
 
 Written for this repo:
 
